@@ -3,7 +3,7 @@ import discord
 import json
 import os
 
-PERATURAN_FILE = "peraturan.json"
+PERATURAN_FILE = "rules.json"
 pending_reset = set()
 
 def setup_peraturan_commands(bot):
