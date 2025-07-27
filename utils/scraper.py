@@ -6,6 +6,7 @@ import re
 
 DATA_FILE = "data.json"
 RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id=UCxxnxya_32jcKj4yN1_kD7A"  # Muse Indonesia
+YT_CHANNEL_URL = "https://www.youtube.com/channel/UCxxnxya_32jcKj4yN1_kD7A"
 
 # 💾 ───── Handling ID Storage ─────
 def load_sent_post_ids():
