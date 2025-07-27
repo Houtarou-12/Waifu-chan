@@ -1,14 +1,16 @@
 from discord.ext import commands
 import discord
 
-def setup_botinfo_commands(bot):
+class BotInfo(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
 
-    @bot.command()
-    async def ping(ctx):
+    @commands.command()
+    async def ping(self, ctx):
         await ctx.send("🏓 Pong! Bot aktif dan responsif.")
 
-    @bot.command(aliases=["helps"])
-    async def waifuhelp(ctx):
+    @commands.command(aliases=["helps"])
+    async def waifuhelp(self, ctx):
         embed = discord.Embed(
             title="📖 Daftar Perintah Waifu-chan",
             color=discord.Color.purple()
@@ -17,31 +19,32 @@ def setup_botinfo_commands(bot):
         embed.add_field(
             name="💫 Umum",
             value=(
-                "`!~ping` — Cek apakah bot aktif\n"
-                "`!~waifuhelp` — Tampilkan daftar perintah\n"
-                "`!~peraturan` — Lihat semua peraturan server\n"
-                "`!~peraturan <no>` — Lihat isi peraturan ke-n"
+                "`~ping` — Cek apakah bot aktif\n"
+                "`~waifuhelp` — Tampilkan daftar perintah\n"
+                "`~peraturan` — Lihat semua peraturan server\n"
+                "`~peraturan <no>` — Lihat isi peraturan ke-n"
             ),
-            inline=True
+            inline=False
         )
 
         embed.add_field(
             name="🔒 Admin Only",
             value=(
-                "`!~clear [jumlah/@user/kata]` — Hapus pesan sesuai filter\n"
-                "`!~confirmclear` — Konfirmasi pembersihan pesan\n"
-                "`!~cekpost` — Kirim ulang post terbaru\n"
-                "`!~cekpost all` — Tampilkan 3 post komunitas terbaru\n"
-                "`!~cekvideo` — Kirim ulang video terbaru\n"
-                "`!~tambahperaturan <isi>` — Tambah peraturan baru\n"
-                "`!~editperaturan <no> <isi>` — Edit peraturan ke-n\n"
-                "`!~hapusperaturan <no>` — Hapus peraturan ke-n\n"
-                "`!~resetperaturan` — Hapus semua peraturan\n"
-                "`!~to <channel_id> <pesan>` — Kirim pesan ke channel tertentu\n"
-                "`!~tendangpengguna <@user>` — Kick member manual"
+                "`~clear [jumlah/@user/kata]` — Hapus pesan sesuai filter\n"
+                "`~cekpost_all` — Tampilkan 3 post komunitas terbaru\n"
+                "`~to <channel_id> <pesan>` — Kirim pesan ke channel tertentu\n"
+                "`~tendangpengguna <@user> [alasan]` — Kick member manual\n"
+                "`~tambahperaturan <isi>` — Tambah peraturan baru\n"
+                "`~editperaturan <no> <isi>` — Edit peraturan ke-n\n"
+                "`~hapusperaturan <no>` — Hapus peraturan ke-n\n"
+                "`~resetperaturan` — Konfirmasi penghapusan semua peraturan"
             ),
-            inline=True
+            inline=False
         )
 
-        embed.set_footer(text="Versi: Waifu-chan v1.0 • ©2025 Jafar Studio")
+        embed.set_footer(text="Versi: Waifu-chan v1.0 • ©2025 Jafar")
         await ctx.send(embed=embed)
+
+# 🔧 Setup untuk extension
+async def setup(bot):
+    await bot.add_cog(BotInfo(bot))
