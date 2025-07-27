@@ -1,14 +1,76 @@
-
 from discord.ext import commands
+from discord import ui, ButtonStyle, Interaction, Embed
 import discord
-import os
 
 clear_buffer = {}
 
-def setup_admin_owner_commands(bot, COMMUNITY_CHANNEL_ID, VIDEO_CHANNEL_ID, YT_CHANNEL_URL, sent_post_ids):
+class ConfirmClearView(ui.View):
+    def __init__(self, author_id, args):
+        super().__init__(timeout=60)
+        self.author_id = author_id
+        self.args = args
 
-    @bot.command()
-    async def cekpost_all(ctx):
+    @ui.button(label="✅ Hapus", style=ButtonStyle.danger)
+    async def confirm(self, interaction: Interaction, button: ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("❌ Ini bukan permintaan kamu.", ephemeral=True)
+            return
+
+        jumlah = self.args["jumlah"]
+        target_user = self.args["user"]
+        keyword = self.args["keyword"]
+
+        def is_target(msg):
+            if target_user and msg.author.id != target_user:
+                return False
+            if keyword and keyword.lower() not in msg.content.lower():
+                return False
+            return True
+
+        to_delete = []
+        async for msg in interaction.channel.history(limit=200):
+            if is_target(msg):
+                to_delete.append(msg)
+            if len(to_delete) >= jumlah:
+                break
+
+        # Hapus embed dan command message
+        try:
+            await self.args["embed_msg"].delete()
+        except:
+            pass
+        try:
+            await interaction.channel.get_partial_message(self.args["command_msg_id"]).delete()
+        except:
+            pass
+
+        if to_delete:
+            await interaction.channel.delete_messages(to_delete)
+
+        await interaction.response.send_message(
+            f"🧹 `{interaction.user.display_name}` menghapus {len(to_delete)} pesan.",
+            delete_after=5
+        )
+
+        clear_buffer.pop(self.author_id, None)
+        self.stop()
+
+    @ui.button(label="❌ Batal", style=ButtonStyle.secondary)
+    async def cancel(self, interaction: Interaction, button: ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("❌ Kamu tidak bisa membatalkan permintaan orang lain.", ephemeral=True)
+            return
+
+        clear_buffer.pop(self.author_id, None)
+        await interaction.response.send_message("🚫 Penghapusan dibatalkan.")
+        self.stop()
+
+class AdminOwnerCommands(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command()
+    async def cekpost_all(self, ctx):
         posts = get_latest_posts(YT_CHANNEL_URL, max_posts=3)
         if not posts:
             await ctx.send("❌ Tidak bisa ambil post komunitas.")
@@ -19,34 +81,34 @@ def setup_admin_owner_commands(bot, COMMUNITY_CHANNEL_ID, VIDEO_CHANNEL_ID, YT_C
                 content += f"\n\n📝 {post['text']}\n🕒 {post['timestamp']}"
             await ctx.send(content)
 
-    @bot.command()
-    async def to(ctx, channel_id: int = None, *, pesan: str = None):
+    @commands.command()
+    async def to(self, ctx, channel_id: int = None, *, pesan: str = None):
         if not channel_id or not pesan:
             await ctx.send("❌ Format: `!~to <channel_id> <pesan>`")
             return
-        channel = bot.get_channel(channel_id)
+        channel = self.bot.get_channel(channel_id)
         if channel:
             await channel.send(pesan)
             await ctx.send(f"✅ Pesan dikirim ke `{channel.name}`.")
         else:
             await ctx.send("❌ Channel tidak ditemukan.")
 
-    @bot.command()
-    async def tendangpengguna(ctx, member: discord.Member = None, *, alasan: str = "Melanggar peraturan"):
-        if ctx.author.guild_permissions.kick_members:
-            if not member:
-                await ctx.send("❌ Kamu harus menyebut user yang akan dikick.")
-                return
-            try:
-                await member.kick(reason=alasan)
-                await ctx.send(f"👢 `{member.display_name}` telah dikick. Alasan: {alasan}")
-            except Exception as e:
-                await ctx.send(f"❌ Gagal kick: {e}")
-        else:
+    @commands.command()
+    async def tendangpengguna(self, ctx, member: discord.Member = None, *, alasan: str = "Melanggar peraturan"):
+        if not ctx.author.guild_permissions.kick_members:
             await ctx.send("❌ Kamu tidak punya izin untuk kick member.")
+            return
+        if not member:
+            await ctx.send("❌ Kamu harus menyebut user yang akan dikick.")
+            return
+        try:
+            await member.kick(reason=alasan)
+            await ctx.send(f"👢 `{member.display_name}` telah dikick. Alasan: {alasan}")
+        except Exception as e:
+            await ctx.send(f"❌ Gagal kick: {e}")
 
-    @bot.command()
-    async def clear(ctx, jumlah: str = None, user: discord.Member = None, *, keyword: str = None):
+    @commands.command()
+    async def clear(self, ctx, jumlah: str = None, user: discord.Member = None, *, keyword: str = None):
         if jumlah == "all":
             jumlah = 100
         try:
@@ -57,34 +119,28 @@ def setup_admin_owner_commands(bot, COMMUNITY_CHANNEL_ID, VIDEO_CHANNEL_ID, YT_C
             await ctx.send("❌ Jumlah harus antara 1–100.")
             return
 
-        clear_buffer[ctx.author.id] = {
+        args = {
             "jumlah": jumlah,
             "user": user.id if user else None,
-            "keyword": keyword
+            "keyword": keyword,
+            "command_msg_id": ctx.message.id  # Untuk hapus command
         }
 
-        message = f"⚠️ Kamu akan menghapus {jumlah} pesan"
+        desc = f"⚠️ Kamu akan menghapus {jumlah} pesan"
         if user:
-            message += f" dari `{user.display_name}`"
+            desc += f" dari `{user.display_name}`"
         if keyword:
-            message += f" yang mengandung kata: `{keyword}`"
-        message += "\nKetik `!~confirmclear` untuk melanjutkan."
-        await ctx.send(message)
+            desc += f" yang mengandung kata: `{keyword}`"
+        desc += "\nKlik tombol di bawah untuk konfirmasi atau batal."
 
-    @bot.command()
-    async def confirmclear(ctx):
-        args = clear_buffer.get(ctx.author.id)
-        if not args:
-            await ctx.send("❌ Tidak ada permintaan penghapusan yang tertunda.")
-            return
+        embed = Embed(title="Konfirmasi Penghapusan", description=desc, color=discord.Color.orange())
+        embed_msg = await ctx.send(embed=embed)
 
-        def check(m):
-            if args["user"] and m.author.id != args["user"]:
-                return False
-            if args["keyword"] and args["keyword"].lower() not in m.content.lower():
-                return False
-            return True
+        args["embed_msg"] = embed_msg  # Untuk hapus embed UI
+        clear_buffer[ctx.author.id] = args
 
-        deleted = await ctx.channel.purge(limit=args["jumlah"], check=check)
-        await ctx.send(f"🧹 `{ctx.author.display_name}` menghapus {len(deleted)} pesan.", delete_after=5)
-        clear_buffer.pop(ctx.author.id, None)
+        await embed_msg.edit(view=ConfirmClearView(ctx.author.id, args))
+
+# ✅ Setup function untuk extension
+async def setup(bot):
+    await bot.add_cog(AdminOwnerCommands(bot))
