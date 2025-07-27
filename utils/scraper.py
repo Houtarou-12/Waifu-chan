@@ -91,7 +91,7 @@ def get_latest_posts(channel_url, max_posts=5):
     return results
 
 # 🔍 ───── Scraper Video via RSS (filter ID) ─────
-def get_latest_rss_videos(rss_url=RSS_URL, max_items=3):
+def get_latest_rss_videos(rss_url=RSS_URL, max_items=3, include_sent=False):
     results = []
     try:
         sent_ids = load_sent_video_ids()
@@ -99,7 +99,7 @@ def get_latest_rss_videos(rss_url=RSS_URL, max_items=3):
 
         for entry in feed.entries:
             video_id = entry.yt_videoid
-            if video_id in sent_ids:
+            if not include_sent and video_id in sent_ids:
                 continue
             results.append({
                 "id": video_id,
@@ -110,7 +110,7 @@ def get_latest_rss_videos(rss_url=RSS_URL, max_items=3):
             if len(results) >= max_items:
                 break
 
-        print(f"[SCRAPER] ✅ Ditemukan {len(results)} video baru dari RSS.")
+        print(f"[SCRAPER] ✅ Ditemukan {len(results)} video dari RSS (include_sent={include_sent})")
     except Exception as e:
         print(f"[SCRAPER] ❌ Gagal ambil RSS: {e}")
     return results
