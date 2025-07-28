@@ -69,28 +69,37 @@ async def check_video():
         print("[INFO] Tidak ada video RSS valid.")
         return
 
-    channel = bot.get_channel(VIDEO_CHANNEL_ID)
-    if not channel:
+    notif_channel = bot.get_channel(VIDEO_CHANNEL_ID)
+    if not notif_channel:
         print(f"[ERROR] Channel video ID ({VIDEO_CHANNEL_ID}) tidak ditemukan!")
         return
 
     for video in new_videos:
-        print(f"[VIDEO] Cek video: {video['title']} | ID: {video['id']}")
-        if video["id"] not in sent_video_ids:
-            thumbnail_url = f"https://img.youtube.com/vi/{video['id']}/hqdefault.jpg"
+        video_id = video["id"]
+        title = video["title"]
+        url = video["url"]
+        thumbnail_url = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+        published = video.get("published", "Tanggal tidak tersedia")
 
+        print(f"[VIDEO] Periksa: {title} | ID: {video_id}")
+
+        if video_id not in sent_video_ids:
             embed = discord.Embed(
-                title=f"{video['title']} | Episode Baru 🎬",
-                url=video["url"],
-                description=f"📅 Dijadwalkan tayang pada `{video.get('published', 'Tanggal tidak tersedia')}`",
+                title=f"{title} | Episode Baru 🎬",
+                url=url,
+                description=f"📅 Dijadwalkan tayang pada `{published}`",
                 color=discord.Color.red()
             )
             embed.set_author(name="Muse Indonesia", url=YT_CHANNEL_URL)
             embed.set_image(url=thumbnail_url)
             embed.set_footer(text="Notifikasi video oleh Waifu-chan❤️")
 
-            await channel.send(embed=embed)
-            sent_video_ids.append(video["id"])
+            try:
+                await notif_channel.send(embed=embed)
+                print(f"[SEND] Embed dikirim ke channel: {notif_channel.name}")
+            except Exception as e:
+                print(f"[ERROR] Gagal kirim embed: {e}")
+            sent_video_ids.append(video_id)
 
     save_sent_video_ids(sent_video_ids)
 
