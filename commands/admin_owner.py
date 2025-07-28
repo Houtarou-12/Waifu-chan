@@ -1,12 +1,18 @@
 import discord
 from discord import ui, ButtonStyle, Interaction, Embed
 from discord.ext import commands
-from utils.scraper import get_latest_posts, get_latest_rss_videos
+from utils.scraper import (
+    get_latest_posts,
+    get_latest_rss_videos,
+    load_sent_video_ids,
+    load_sent_post_ids,
+    save_sent_video_ids,
+    save_sent_post_ids
+)
 
 YT_CHANNEL_URL = "https://www.youtube.com/@MuseIndonesia"
 clear_buffer = {}
 
-# 🎯 ─── Tombol Konfirmasi Hapus ───
 class ConfirmClearView(ui.View):
     def __init__(self, author_id, args):
         super().__init__(timeout=60)
@@ -135,7 +141,7 @@ class AdminOwnerCommands(commands.Cog):
         await embed_msg.edit(view=ConfirmClearView(ctx.author.id, args))
 
     @commands.command()
-    async def cekpost(self, ctx, jumlah: int = 3):
+    async def cekpost(self, ctx, jumlah: int = 1):
         posts = get_latest_posts(YT_CHANNEL_URL, max_posts=jumlah)
         if not posts:
             await ctx.send("❌ Tidak bisa ambil post komunitas.")
@@ -154,16 +160,19 @@ class AdminOwnerCommands(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command()
-    async def cekvideo(self, ctx, jumlah: int = 3):
-        videos = get_latest_rss_videos(YT_CHANNEL_URL, max_posts=jumlah)
+    async def cekvideo(self, ctx, jumlah: int = 1):
+        sent_ids = load_sent_video_ids()
+        videos = get_latest_rss_videos(max_posts=jumlah, include_sent=True)
         if not videos:
             await ctx.send("❌ Tidak bisa ambil video terbaru.")
             return
 
+        new_ids = []
         for vid in videos:
+            tag = "✅ " if vid["id"] in sent_ids else "🆕 "
             embed = Embed(
-                title=f"📹 {vid['title']}",
-                url=vid['url'],
+                title=f"{tag}{vid['title']}",
+                url=vid["url"],
                 description=vid.get("description", "Tidak ada deskripsi."),
                 color=discord.Color.blurple()
             )
@@ -171,7 +180,11 @@ class AdminOwnerCommands(commands.Cog):
             if vid.get("thumbnail"):
                 embed.set_image(url=vid["thumbnail"])
             await ctx.send(embed=embed)
+            if vid["id"] not in sent_ids:
+                new_ids.append(vid["id"])
 
-# 📦 ─── Register Cog ───
+        if new_ids:
+            save_sent_video_ids(sent_ids + new_ids)
+
 async def setup(bot):
     await bot.add_cog(AdminOwnerCommands(bot))
