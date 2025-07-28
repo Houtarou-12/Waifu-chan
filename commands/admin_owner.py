@@ -6,6 +6,7 @@ from utils.scraper import get_latest_posts, get_latest_rss_videos
 YT_CHANNEL_URL = "https://www.youtube.com/@MuseIndonesia"
 clear_buffer = {}
 
+# 🎯 ─── Tombol Konfirmasi Hapus ───
 class ConfirmClearView(ui.View):
     def __init__(self, author_id, args):
         super().__init__(timeout=60)
@@ -171,5 +172,6 @@ class AdminOwnerCommands(commands.Cog):
                 embed.set_image(url=vid["thumbnail"])
             await ctx.send(embed=embed)
 
+# 📦 ─── Register Cog ───
 async def setup(bot):
     await bot.add_cog(AdminOwnerCommands(bot))
