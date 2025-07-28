@@ -9,8 +9,13 @@ from utils.scraper import (
     save_sent_video_ids,
     save_sent_post_ids
 )
+from discord.ext import commands
+from utils.scraper import get_latest_rss_videos, YT_CHANNEL_URL
+import discord
+import os
 
 YT_CHANNEL_URL = "https://www.youtube.com/@MuseIndonesia"
+VIDEO_CHANNEL_ID = int(os.getenv("VIDEO_CHANNEL_ID", "0"))
 clear_buffer = {}
 
 class ConfirmClearView(ui.View):
@@ -161,17 +166,25 @@ class AdminOwnerCommands(commands.Cog):
 
     @commands.command()
     async def cekvideo(self, ctx, jumlah: int = 1):
-        sent_ids = load_sent_video_ids()
         videos = get_latest_rss_videos(max_posts=jumlah, include_sent=True)
-        if not videos:
-            await ctx.send("❌ Tidak bisa ambil video terbaru.")
-            return
+        sent_ids = load_sent_video_ids()
+
+        # Ambil channel utama dari data.json
+        try:
+            with open("data.json", "r") as f:
+                config = json.load(f)
+            main_channel_id = config.get("main_channel_id")
+            main_channel = self.bot.get_channel(main_channel_id) if main_channel_id else None
+        except Exception as e:
+            print(f"[ERROR] Gagal ambil channel utama: {e}")
+            main_channel = None
 
         new_ids = []
         for vid in videos:
-            tag = "✅ " if vid["id"] in sent_ids else "🆕 "
+            is_new = vid["id"] not in sent_ids
+            tag = "🆕" if is_new else "✅"
             embed = Embed(
-                title=f"{tag}{vid['title']}",
+                title=f"{tag} {vid['title']}",
                 url=vid["url"],
                 description=vid.get("description", "Tidak ada deskripsi."),
                 color=discord.Color.blurple()
@@ -179,12 +192,52 @@ class AdminOwnerCommands(commands.Cog):
             embed.set_footer(text=f"🕒 {vid['timestamp']}")
             if vid.get("thumbnail"):
                 embed.set_image(url=vid["thumbnail"])
+
+            # Kirim ke channel pemanggil
             await ctx.send(embed=embed)
-            if vid["id"] not in sent_ids:
+
+            # Kirim ke channel utama jika belum pernah dikirim
+            if is_new and main_channel and main_channel != ctx.channel:
+                try:
+                    await main_channel.send(embed=embed)
+                    print(f"[INFO] Video dikirim ke channel utama: {main_channel.name}")
+                except Exception as e:
+                    print(f"[ERROR] Gagal kirim ke channel utama: {e}")
+
+            if is_new:
                 new_ids.append(vid["id"])
 
         if new_ids:
             save_sent_video_ids(sent_ids + new_ids)
+
+    @commands.command(name="tes_notif")
+    @commands.is_owner()  # Opsional: batasi ke owner
+    async def tes_notif(self, ctx):
+        videos = get_latest_rss_videos(include_sent=True)
+        if not videos:
+            await ctx.send("📭 Tidak ada video untuk diuji.")
+            return
+
+        channel = ctx.bot.get_channel(VIDEO_CHANNEL_ID)
+        if not channel:
+            await ctx.send("❌ Channel VIDEO_CHANNEL_ID tidak ditemukan.")
+            return
+
+        video = videos[0]  # Ambil satu video untuk testing
+        thumbnail_url = f"https://img.youtube.com/vi/{video['id']}/hqdefault.jpg"
+
+        embed = discord.Embed(
+            title=f"{video['title']} | Uji Notif 🎬",
+            url=video["url"],
+            description=f"📅 Dijadwalkan tayang pada `{video.get('published', 'Tanggal tidak tersedia')}`",
+            color=discord.Color.red()
+        )
+        embed.set_author(name="Muse Indonesia", url=YT_CHANNEL_URL)
+        embed.set_image(url=thumbnail_url)
+        embed.set_footer(text="Notifikasi video oleh Waifu-chan❤️ (Tes Manual)")
+
+        await channel.send(embed=embed)
+        await ctx.send(f"✅ Embed video berhasil dikirim ke <#{VIDEO_CHANNEL_ID}>")
 
 async def setup(bot):
     await bot.add_cog(AdminOwnerCommands(bot))
