@@ -1,7 +1,9 @@
-from discord.ext import commands
-from discord import ui, ButtonStyle, Interaction, Embed
 import discord
+from discord import ui, ButtonStyle, Interaction, Embed
+from discord.ext import commands
+from utils.scraper import get_latest_posts, get_latest_rss_videos
 
+YT_CHANNEL_URL = "https://www.youtube.com/@MuseIndonesia"
 clear_buffer = {}
 
 class ConfirmClearView(ui.View):
@@ -34,15 +36,10 @@ class ConfirmClearView(ui.View):
             if len(to_delete) >= jumlah:
                 break
 
-        # Hapus embed dan command message
-        try:
-            await self.args["embed_msg"].delete()
-        except:
-            pass
-        try:
-            await interaction.channel.get_partial_message(self.args["command_msg_id"]).delete()
-        except:
-            pass
+        try: await self.args["embed_msg"].delete()
+        except: pass
+        try: await interaction.channel.get_partial_message(self.args["command_msg_id"]).delete()
+        except: pass
 
         if to_delete:
             await interaction.channel.delete_messages(to_delete)
@@ -84,7 +81,7 @@ class AdminOwnerCommands(commands.Cog):
     @commands.command()
     async def to(self, ctx, channel_id: int = None, *, pesan: str = None):
         if not channel_id or not pesan:
-            await ctx.send("❌ Format: `!~to <channel_id> <pesan>`")
+            await ctx.send("❌ Format: `~to <channel_id> <pesan>`")
             return
         channel = self.bot.get_channel(channel_id)
         if channel:
@@ -109,12 +106,9 @@ class AdminOwnerCommands(commands.Cog):
 
     @commands.command()
     async def clear(self, ctx, jumlah: str = None, user: discord.Member = None, *, keyword: str = None):
-        if jumlah == "all":
-            jumlah = 100
-        try:
-            jumlah = int(jumlah)
-        except:
-            jumlah = 10
+        if jumlah == "all": jumlah = 100
+        try: jumlah = int(jumlah)
+        except: jumlah = 10
         if jumlah < 1 or jumlah > 100:
             await ctx.send("❌ Jumlah harus antara 1–100.")
             return
@@ -123,24 +117,59 @@ class AdminOwnerCommands(commands.Cog):
             "jumlah": jumlah,
             "user": user.id if user else None,
             "keyword": keyword,
-            "command_msg_id": ctx.message.id  # Untuk hapus command
+            "command_msg_id": ctx.message.id
         }
 
         desc = f"⚠️ Kamu akan menghapus {jumlah} pesan"
-        if user:
-            desc += f" dari `{user.display_name}`"
-        if keyword:
-            desc += f" yang mengandung kata: `{keyword}`"
+        if user: desc += f" dari `{user.display_name}`"
+        if keyword: desc += f" yang mengandung kata: `{keyword}`"
         desc += "\nKlik tombol di bawah untuk konfirmasi atau batal."
 
         embed = Embed(title="Konfirmasi Penghapusan", description=desc, color=discord.Color.orange())
         embed_msg = await ctx.send(embed=embed)
 
-        args["embed_msg"] = embed_msg  # Untuk hapus embed UI
+        args["embed_msg"] = embed_msg
         clear_buffer[ctx.author.id] = args
 
         await embed_msg.edit(view=ConfirmClearView(ctx.author.id, args))
 
-# ✅ Setup function untuk extension
+    @commands.command()
+    async def cekpost(self, ctx, jumlah: int = 3):
+        posts = get_latest_posts(YT_CHANNEL_URL, max_posts=jumlah)
+        if not posts:
+            await ctx.send("❌ Tidak bisa ambil post komunitas.")
+            return
+
+        for post in posts:
+            embed = Embed(
+                title="📌 Post Komunitas",
+                url=post['url'],
+                description=post.get("text", "Tidak ada teks."),
+                color=discord.Color.green()
+            )
+            embed.set_footer(text=f"🕒 {post['timestamp']}")
+            if post.get("image"):
+                embed.set_image(url=post["image"])
+            await ctx.send(embed=embed)
+
+    @commands.command()
+    async def cekvideo(self, ctx, jumlah: int = 3):
+        videos = get_latest_rss_videos(YT_CHANNEL_URL, max_posts=jumlah)
+        if not videos:
+            await ctx.send("❌ Tidak bisa ambil video terbaru.")
+            return
+
+        for vid in videos:
+            embed = Embed(
+                title=f"📹 {vid['title']}",
+                url=vid['url'],
+                description=vid.get("description", "Tidak ada deskripsi."),
+                color=discord.Color.blurple()
+            )
+            embed.set_footer(text=f"🕒 {vid['timestamp']}")
+            if vid.get("thumbnail"):
+                embed.set_image(url=vid["thumbnail"])
+            await ctx.send(embed=embed)
+
 async def setup(bot):
     await bot.add_cog(AdminOwnerCommands(bot))
