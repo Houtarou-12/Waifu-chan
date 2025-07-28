@@ -105,6 +105,7 @@ def get_latest_rss_videos(rss_url=RSS_URL, max_posts=3, include_sent=False):
     try:
         sent_ids = load_sent_video_ids()
         feed = feedparser.parse(rss_url)
+        print(f"[DEBUG] Jumlah video di feed RSS: {len(feed.entries)}")
 
         for entry in feed.entries:
             video_id = entry.yt_videoid
@@ -122,8 +123,10 @@ def get_latest_rss_videos(rss_url=RSS_URL, max_posts=3, include_sent=False):
                 "description": description,
                 "thumbnail": thumbnail,
                 "timestamp": published,
-                "published": published  # ✅ Tambahan field yang dibutuhkan
+                "published": published
             })
+
+            print(f"[DEBUG] Video ditemukan: {video_id} | Judul: {entry.title}")
 
             if len(results) >= max_posts:
                 break
@@ -133,6 +136,7 @@ def get_latest_rss_videos(rss_url=RSS_URL, max_posts=3, include_sent=False):
         print(f"[SCRAPER] ❌ Gagal ambil RSS: {e}")
     return results
 
+# 🧼 ─── Tombol Konfirmasi Clear ───
 class ConfirmClear(ui.View):
     def __init__(self, key, ctx, timeout=30):
         super().__init__(timeout=timeout)
