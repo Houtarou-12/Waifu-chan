@@ -2,13 +2,13 @@ import os
 import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
+import json
 
 from utils.scraper import (
     RSS_URL,
     YT_CHANNEL_URL,
     get_latest_posts, get_latest_rss_videos,
-    load_sent_post_ids, save_sent_post_ids,
-    load_sent_video_ids, save_sent_video_ids
+    load_sent_post_ids, save_sent_post_ids
 )
 
 # 🔧 Load konfigurasi
@@ -62,9 +62,15 @@ async def check_community():
 @tasks.loop(seconds=30)
 async def check_video():
     print("[LOOP] check_video aktif...")
-    sent_video_ids = load_sent_video_ids()
-    new_videos = get_latest_rss_videos()
+    try:
+        with open("data.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+            sent_video_ids = data.get("sent_video_ids", [])
+    except Exception as e:
+        print(f"[ERROR] Gagal load sent_video_ids: {e}")
+        sent_video_ids = []
 
+    new_videos = get_latest_rss_videos()
     if not new_videos:
         print("[INFO] Tidak ada video RSS valid.")
         return
@@ -82,7 +88,6 @@ async def check_video():
         published = video.get("published", "Tanggal tidak tersedia")
 
         print(f"[VIDEO] Periksa: {title} | ID: {video_id}")
-
         if video_id not in sent_video_ids:
             embed = discord.Embed(
                 title=f"{title} | Episode Baru 🎬",
@@ -97,11 +102,24 @@ async def check_video():
             try:
                 await notif_channel.send(embed=embed)
                 print(f"[SEND] Embed dikirim ke channel: {notif_channel.name}")
+                sent_video_ids.append(video_id)
             except Exception as e:
                 print(f"[ERROR] Gagal kirim embed: {e}")
-            sent_video_ids.append(video_id)
 
-    save_sent_video_ids(sent_video_ids)
+    try:
+        with open("data.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except:
+        data = {}
+
+    data["sent_video_ids"] = sent_video_ids
+
+    try:
+        with open("data.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+        print("[SAVE] sent_video_ids berhasil disimpan.")
+    except Exception as e:
+        print(f"[ERROR] Gagal simpan data.json: {e}")
 
 # 🔌 Bot Ready
 @bot.event
