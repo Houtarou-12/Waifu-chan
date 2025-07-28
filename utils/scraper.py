@@ -113,6 +113,7 @@ def get_latest_rss_videos(rss_url=RSS_URL, max_posts=3, include_sent=False):
 
             thumbnail = entry.get("media_thumbnail", [{}])[0].get("url", "")
             description = entry.get("summary", "")
+            published = entry.get("published", "Tanggal tidak tersedia")
 
             results.append({
                 "id": video_id,
@@ -120,7 +121,8 @@ def get_latest_rss_videos(rss_url=RSS_URL, max_posts=3, include_sent=False):
                 "url": entry.link,
                 "description": description,
                 "thumbnail": thumbnail,
-                "timestamp": entry.published
+                "timestamp": published,
+                "published": published  # ✅ Tambahan field yang dibutuhkan
             })
 
             if len(results) >= max_posts:
