@@ -9,6 +9,10 @@ class BotInfo(commands.Cog):
     async def ping(self, ctx):
         await ctx.send("🏓 Pong! Bot aktif dan responsif.")
 
+class BotInfo(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
     @commands.command(aliases=["helps"])
     async def waifuhelp(self, ctx):
         embed = discord.Embed(
@@ -22,7 +26,9 @@ class BotInfo(commands.Cog):
                 "`~ping` — Cek apakah bot aktif\n"
                 "`~waifuhelp` — Tampilkan daftar perintah\n"
                 "`~peraturan` — Lihat semua peraturan server\n"
-                "`~peraturan <no>` — Lihat isi peraturan ke-n"
+                "`~peraturan <no>` — Lihat isi peraturan ke-n\n"
+                "`~cekvideo` — Tampilkan video terbaru dari channel\n"
+                "`~cekpost` — Tampilkan post komunitas terbaru"
             ),
             inline=False
         )
@@ -30,7 +36,7 @@ class BotInfo(commands.Cog):
         embed.add_field(
             name="🔒 Admin Only",
             value=(
-                "`~clear [jumlah/@user/kata]` — Hapus pesan sesuai filter\n"
+                "`~clear [jumlah/@user/kata]` — Hapus pesan sesuai filter (dengan konfirmasi)\n"
                 "`~cekpost_all` — Tampilkan 3 post komunitas terbaru\n"
                 "`~to <channel_id> <pesan>` — Kirim pesan ke channel tertentu\n"
                 "`~tendangpengguna <@user> [alasan]` — Kick member manual\n"
