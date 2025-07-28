@@ -2,13 +2,11 @@ import os
 import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
-import feedparser
 
 from utils.scraper import (
     RSS_URL,
     YT_CHANNEL_URL,
-    get_latest_posts,
-    get_latest_rss_videos,
+    get_latest_posts, get_latest_rss_videos,
     load_sent_post_ids, save_sent_post_ids,
     load_sent_video_ids, save_sent_video_ids
 )
@@ -30,6 +28,7 @@ bot = commands.Bot(command_prefix="~", intents=intents)
 # 🔁 Loop Komunitas Otomatis
 @tasks.loop(seconds=30)
 async def check_community():
+    print("[LOOP] check_community aktif...")
     sent_post_ids = load_sent_post_ids()
     new_posts = get_latest_posts(YT_CHANNEL_URL, max_posts=5)
 
@@ -38,8 +37,13 @@ async def check_community():
         return
 
     channel = bot.get_channel(CHANNEL_ID)
+    if not channel:
+        print(f"[ERROR] Channel komunitas ID ({CHANNEL_ID}) tidak ditemukan!")
+        return
+
     for post in new_posts:
         if post["id"] not in sent_post_ids:
+            print(f"[POST] Post baru terdeteksi: {post['id']}")
             embed = discord.Embed(
                 title="Post Komunitas Baru",
                 url=post["url"],
@@ -49,8 +53,7 @@ async def check_community():
             embed.set_author(name="Muse Indonesia", url=YT_CHANNEL_URL)
             embed.set_footer(text="Notifikasi komunitas oleh Waifu-chan❤️")
 
-            if channel:
-                await channel.send(embed=embed)
+            await channel.send(embed=embed)
             sent_post_ids.append(post["id"])
 
     save_sent_post_ids(sent_post_ids)
@@ -58,6 +61,7 @@ async def check_community():
 # 🔁 Loop Video Otomatis (RSS)
 @tasks.loop(seconds=30)
 async def check_video():
+    print("[LOOP] check_video aktif...")
     sent_video_ids = load_sent_video_ids()
     new_videos = get_latest_rss_videos()
 
@@ -66,22 +70,26 @@ async def check_video():
         return
 
     channel = bot.get_channel(VIDEO_CHANNEL_ID)
+    if not channel:
+        print(f"[ERROR] Channel video ID ({VIDEO_CHANNEL_ID}) tidak ditemukan!")
+        return
+
     for video in new_videos:
+        print(f"[VIDEO] Cek video: {video['title']} | ID: {video['id']}")
         if video["id"] not in sent_video_ids:
             thumbnail_url = f"https://img.youtube.com/vi/{video['id']}/hqdefault.jpg"
 
             embed = discord.Embed(
                 title=f"{video['title']} | Episode Baru 🎬",
                 url=video["url"],
-                description=f"📅 Dijadwalkan tayang pada `{video['published']}`",
+                description=f"📅 Dijadwalkan tayang pada `{video.get('published', 'Tanggal tidak tersedia')}`",
                 color=discord.Color.red()
             )
             embed.set_author(name="Muse Indonesia", url=YT_CHANNEL_URL)
             embed.set_image(url=thumbnail_url)
             embed.set_footer(text="Notifikasi video oleh Waifu-chan❤️")
 
-            if channel:
-                await channel.send(embed=embed)
+            await channel.send(embed=embed)
             sent_video_ids.append(video["id"])
 
     save_sent_video_ids(sent_video_ids)
@@ -94,7 +102,6 @@ async def on_ready():
     check_community.start()
     check_video.start()
 
-    # 📦 Load semua cogs
     await bot.load_extension("commands.peraturan")
     await bot.load_extension("commands.admin_owner")
     await bot.load_extension("commands.botinfo")
