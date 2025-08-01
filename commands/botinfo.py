@@ -9,6 +9,7 @@ class BotInfo(commands.Cog):
     async def waifuhelp(self, ctx):
         embed = discord.Embed(
             title="📖 Daftar Perintah Waifu-chan",
+            description="Berikut command yang tersedia berdasarkan role kamu.",
             color=discord.Color.purple()
         )
 
@@ -28,17 +29,29 @@ class BotInfo(commands.Cog):
         )
 
         embed.add_field(
-            name="🔒 Admin & Owner Only",
+            name="🔒 Admin / Owner Only",
             value=(
-                "`~clear` — Hapus pesan sesuai filter\n"
+                "`~clear [...]` — Hapus pesan sesuai filter\n"
                 "`~confirmclear` — Konfirmasi penghapusan\n"
                 "`~kickout @user` — Kick member dari server\n"
                 "`~vkick @user` — Kick dari voice channel\n"
-                "`~forward #channel <pesan>` — Kirim pesan ke channel lain (dengan nama pengirim)\n"
-                "`~to <channel_id> <pesan>` — Kirim pesan anonim ke channel terdaftar\n"
-                "`~tendangpengguna @user` — Kick alternatif (dengan alasan)\n"
-                "`~setchannel` — Atur channel utama\n"
-                "`~tambahperaturan` / `~editperaturan` / `~hapusperaturan` — Kelola peraturan"
+                "`~forward #channel <pesan>` — Kirim pesan dengan identitas pengirim\n"
+                "`~to <pesan>` — Kirim pesan anonim ke channel utama\n"
+                "`~setchannel` — Atur channel utama untuk `~to`\n"
+                "`~tambahperaturan <isi>` — Tambahkan peraturan baru\n"
+                "`~editperaturan <no> <isi>` — Edit peraturan yang ada\n"
+                "`~hapusperaturan <no>` — Hapus peraturan ke-n\n"
+                "`~resetperaturan` — Reset semua peraturan"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="🧪 Tambahan / Fitur Testing",
+            value=(
+                "`~embed_post` — Generate embed dari post komunitas\n"
+                "`~embed_video` — Generate embed dari video terbaru\n"
+                "`~tes_notif` — Test notifikasi manual (video/post)"
             ),
             inline=False
         )
