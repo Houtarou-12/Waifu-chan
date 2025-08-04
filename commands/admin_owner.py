@@ -72,7 +72,6 @@ class ConfirmClearView(ui.View):
         await interaction.response.send_message("🚫 Penghapusan dibatalkan.")
         self.stop()
 
-
 class AdminOwnerCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -137,6 +136,16 @@ class AdminOwnerCommands(commands.Cog):
             embed = Embed(description=pesan, color=discord.Color.blue())
             embed.set_footer(text="🕵️ Pesan anonim")
             await channel.send(embed=embed)
+
+            try:
+                await ctx.author.send(f"✅ Pesan anonim kamu berhasil dikirim ke `{channel.name}`.")
+            except discord.Forbidden:
+                pass
+
+            try:
+                await ctx.message.delete()
+            except discord.Forbidden:
+                pass
         except discord.Forbidden:
             await ctx.send("❌ Bot tidak punya izin untuk kirim ke channel tujuan.")
 
@@ -144,7 +153,7 @@ class AdminOwnerCommands(commands.Cog):
     async def clear(self, ctx, jumlah: str = None, user: discord.Member = None, *, keyword: str = None):
         if jumlah == "all": jumlah = 100
         try: jumlah = int(jumlah)
-        except: jumlah = 10
+        except: jumlah = 15
         if jumlah < 1 or jumlah > 100:
             await ctx.send("❌ Jumlah harus antara 1–100.")
             return
